@@ -193,14 +193,27 @@
             ;;; LDA $DD0D
             JMP RETIRQ ; done
 
-!IF SHAREWARE = 1 {
-  
-.X_SNES_CONTROLER_READ:
+
+ ;IDUN modification- use J: device (usb gamepad)
+.IDUN_GET_CONTROLLER:
+  ; TALK channel J:
+  LDA #$4a
+  STA $DE00
+  NOP
+  ; SECOND $7F
+  LDA #$7F
+  STA $DE00
+  ; Get 4-byte response
+  LDX #0
+- LDA $DE01
+  BEQ -
+  LDA $DE00
+  STA IDUN_CTRL_INPUT,x
+  INX
+  CPX #4
+  BNE -
   RTS
-
-}
-
-!IF SHAREWARE = 0 {
+IDUN_CTRL_INPUT !fill 4,$ff
 
 .X_SNES_CONTROLER_READ:
   +PH MMU
@@ -209,33 +222,76 @@
   LDY #0
 SNCL: LDA SNES_B,Y
   STA LAST_B,Y
-  ; STA $C000,Y   ;TESTCODE
   INY
   CPY #12
   BNE SNCL
-  ;now latch data
-  LDA #%00100000  ;latch on pin 5
-  STA CI2PRB
-  LDA #%00000000
-  STA CI2PRB
-  LDX #0
-  ;Now read in bits
-SRLOOP: LDA CI2PRB
-  AND #%01000000  ;READ pin 6
-  CMP #%01000000
-  BEQ SRL1
+  JSR .IDUN_GET_CONTROLLER
+  LDA #$FF
+  CMP IDUN_CTRL_INPUT+0
+  BNE +
+  LDA #$00
+  STA IDUN_CTRL_INPUT+0
+  STA IDUN_CTRL_INPUT+1
++ LDA #$02
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
   LDA #1
-  JMP SRL5
-SRL1: LDA #0
-SRL5: STA SNES_B,X
-  ;pulse the clock line
-  LDA #%00001000  ;CLOCK on pin 3
-  STA CI2PRB
-  LDA #%00000000
-  STA CI2PRB
-  INX
-  CPX #12
-  BNE SRLOOP
++ STA SNES_B
+  LDA #$08
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_Y
+  LDA #$40
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_SELECT
+  LDA #$80
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_START
+  LDA #$08
+  AND IDUN_CTRL_INPUT+0
+  BEQ +
+  LDA #1
++ STA SNES_UP
+  LDA #$04
+  AND IDUN_CTRL_INPUT+0
+  BEQ +
+  LDA #1
++ STA SNES_DOWN
+  LDA #$02
+  AND IDUN_CTRL_INPUT+0
+  BEQ +
+  LDA #1
++ STA SNES_LEFT
+  LDA #$01
+  AND IDUN_CTRL_INPUT+0
+  BEQ +
+  LDA #1
++ STA SNES_RIGHT
+  LDA #$01
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_A
+  LDA #$04
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_X
+  LDA #$20
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_BACK_L
+  LDA #$40
+  AND IDUN_CTRL_INPUT+1
+  BEQ +
+  LDA #1
++ STA SNES_BACK_R
   ;now process any new presses
   LDY #0
 SRL09:  LDA NEW_B,Y
@@ -254,7 +310,6 @@ SRL10:  INY
   BNE SRL09
   +PL MMU
   RTS
-}
 
 .X_CLEAR_KEY_BUFFER:
   LDA #0

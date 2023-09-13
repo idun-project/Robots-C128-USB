@@ -562,7 +562,8 @@ CYCLE_CONTROLS:
 
 CONTROLTEXT:  !SCR"keyboard  "
               !SCR"custom key"
-              !SCR"snes pad  "
+              ;IDUN mod
+              !SCR"usb-gampad"
 CONTROLSTART: !BYTE 00,10,20
 
 CYCLE_MAP:
